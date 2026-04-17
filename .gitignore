@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.DS_Store
+*.log
+data/scans/
+data/cache/
+*.xml
+*.json
+!package.json
+!tsconfig.json
+!vite.config.js
+!tailwind.config.js
+!postcss.config.js
+.vscode/
+.idea/
