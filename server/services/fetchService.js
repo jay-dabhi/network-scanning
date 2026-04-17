@@ -9,8 +9,10 @@ class FetchService {
     this.previewLength = config.fetch.previewLength;
   }
 
-  async fetchHTTPData(hosts) {
+  async fetchHTTPData(hosts, progressCallback = null) {
     const results = [];
+    const totalHosts = hosts.filter(h => h.ports.some(p => p.state === 'open')).length;
+    let processedHosts = 0;
 
     for (const host of hosts) {
       const hostResult = {
@@ -23,16 +25,10 @@ class FetchService {
 
       for (const port of openPorts) {
         const portNumber = port.port;
+        const protocol = this.detectWebProtocol(port);
 
-        if (this.httpPorts.includes(portNumber)) {
-          const data = await this.fetchFromPort(host.ip, portNumber, 'http');
-          if (data) {
-            hostResult.webData.push(data);
-          }
-        }
-
-        if (this.httpsPorts.includes(portNumber)) {
-          const data = await this.fetchFromPort(host.ip, portNumber, 'https');
+        if (protocol) {
+          const data = await this.fetchFromPort(host.ip, portNumber, protocol);
           if (data) {
             hostResult.webData.push(data);
           }
@@ -42,9 +38,39 @@ class FetchService {
       if (hostResult.webData.length > 0) {
         results.push(hostResult);
       }
+
+      if (openPorts.length > 0) {
+        processedHosts++;
+        if (progressCallback && totalHosts > 0) {
+          progressCallback(processedHosts, totalHosts);
+        }
+      }
     }
 
     return results;
+  }
+
+  detectWebProtocol(port) {
+    const service = port.service?.toLowerCase() || '';
+    const portNumber = port.port;
+
+    if (service.includes('https') || service.includes('ssl') || service.includes('tls')) {
+      return 'https';
+    }
+
+    if (service === 'http' || service.includes('http-proxy') || service.includes('http-alt')) {
+      return 'http';
+    }
+
+    if (this.httpsPorts.includes(portNumber)) {
+      return 'https';
+    }
+
+    if (this.httpPorts.includes(portNumber)) {
+      return 'http';
+    }
+
+    return null;
   }
 
   async fetchFromPort(ip, port, protocol) {
@@ -147,8 +173,8 @@ class FetchService {
       .trim();
   }
 
-  async enrichHostsWithWebData(hosts) {
-    const webData = await this.fetchHTTPData(hosts);
+  async enrichHostsWithWebData(hosts, progressCallback = null) {
+    const webData = await this.fetchHTTPData(hosts, progressCallback);
 
     const enrichedHosts = hosts.map(host => {
       const hostWebData = webData.find(w => w.ip === host.ip);

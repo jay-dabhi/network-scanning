@@ -65,9 +65,11 @@ class NmapTool extends ToolInterface {
 
       await fs.writeFile(targetsFile, discoveredHosts.join('\n'));
 
-      this.updateProgress(30, `Scanning ${discoveredHosts.length} hosts...`);
+      this.updateProgress(30, `Scanning ports on ${discoveredHosts.length} host(s)...`);
       await this.scanPorts(targetsFile, outputFile);
 
+      this.updateProgress(90, 'Parsing results...');
+      
       this.updateProgress(100, 'Scan complete');
       this.updateStatus('completed');
 

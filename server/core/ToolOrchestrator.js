@@ -18,6 +18,8 @@ class ToolOrchestrator extends EventEmitter {
       toolNames,
       startTime: Date.now(),
       status: 'running',
+      phase: 'scanning',
+      currentPhase: 'Discovering hosts...',
       toolResults: {}
     };
 
@@ -98,11 +100,20 @@ class ToolOrchestrator extends EventEmitter {
     return results;
   }
 
+  updatePhase(phase, currentPhase) {
+    if (this.activeScan) {
+      this.activeScan.phase = phase;
+      this.activeScan.currentPhase = currentPhase;
+    }
+  }
+
   async getScanStatus(scanId) {
     if (this.activeScan && this.activeScan.scanId === scanId) {
       return {
         scanId,
         status: this.activeScan.status,
+        phase: this.activeScan.phase,
+        currentPhase: this.activeScan.currentPhase,
         startTime: this.activeScan.startTime,
         toolResults: this.activeScan.toolResults,
         elapsedTime: Date.now() - this.activeScan.startTime

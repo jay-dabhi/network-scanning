@@ -70,17 +70,26 @@ router.post(
 
       const aggregatedResults = aggregator.aggregate(scanResults.tools);
 
+      orchestrator.updatePhase('enriching', 'Fetching HTTP data...');
       console.log('Fetching HTTP/HTTPS data...');
       const enrichedHosts = await fetchService.enrichHostsWithWebData(
-        aggregatedResults.hosts
+        aggregatedResults.hosts,
+        (current, total) => {
+          orchestrator.updatePhase('enriching', `Fetching HTTP data... (${current}/${total} hosts)`);
+        }
       );
 
+      orchestrator.updatePhase('analyzing', 'Running AI analysis...');
       console.log('Running AI analysis...');
       const aiAnalysis = await ollamaService.analyzeAllHosts(
         enrichedHosts,
-        ollamaModel
+        ollamaModel,
+        (current, total) => {
+          orchestrator.updatePhase('analyzing', `Running AI analysis... (${current}/${total} hosts)`);
+        }
       );
 
+      orchestrator.updatePhase('finalizing', 'Generating final results...');
       const finalHosts = enrichedHosts.map(host => {
         const analysis = aiAnalysis.find(a => a.ip === host.ip);
         return {
@@ -116,9 +125,11 @@ router.post(
         JSON.stringify(finalResults, null, 2)
       );
 
+      orchestrator.updatePhase('completed', 'Scan completed successfully');
       console.log(`Scan ${scanId} completed successfully`);
 
     } catch (error) {
+      orchestrator.updatePhase('error', `Scan failed: ${error.message}`);
       console.error(`Scan ${scanId} failed:`, error);
     } finally {
       rateLimiter.markScanComplete();

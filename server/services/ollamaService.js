@@ -20,15 +20,21 @@ class OllamaService {
     }
   }
 
-  async analyzeAllHosts(hosts, model = null) {
+  async analyzeAllHosts(hosts, model = null, progressCallback = null) {
     const results = [];
+    const totalHosts = hosts.length;
 
-    for (const host of hosts) {
+    for (let i = 0; i < hosts.length; i++) {
+      const host = hosts[i];
       const analysis = await this.analyzeHost(host, model);
       results.push({
         ip: host.ip,
         analysis
       });
+
+      if (progressCallback) {
+        progressCallback(i + 1, totalHosts);
+      }
     }
 
     return results;
@@ -105,7 +111,7 @@ Respond ONLY with valid JSON, no additional text.`;
         `${this.endpoint}/api/generate`,
         requestBody,
         {
-          timeout: this.timeout,
+          timeout: 0,
           headers: {
             'Content-Type': 'application/json'
           }
